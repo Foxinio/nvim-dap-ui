@@ -8,8 +8,8 @@ local buf_wins = {}
 local function create_buffer(content)
   local buf_nr = api.nvim_create_buf(false, true)
   vim.fn.setbufline(buf_nr, 1, content)
-  api.nvim_buf_set_option(buf_nr, "bufhidden", "wipe")
-  api.nvim_buf_set_option(buf_nr, "modified", false)
+  api.nvim_set_option_value("bufhidden", "wipe", { buf = buf_nr })
+  api.nvim_set_option_value("modified", false, { buf = buf_nr })
 
   return buf_nr
 end
@@ -90,7 +90,13 @@ function M.show()
     border = "none",
     row = 0,
     col = 0,
+    -- Passive popup: never take focus or intercept mouse clicks meant for the
+    -- line underneath (e.g. a release after a press that opened it).
+    focusable = false,
   }
+  if vim.fn.has("nvim-0.11") == 1 then
+    win_opts.mouse = false
+  end
 
   local window_id = buf_wins[buffer]
   local hover_buf

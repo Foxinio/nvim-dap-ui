@@ -26,7 +26,12 @@ local WindowLayout = {}
 
 function WindowLayout:open()
   if self:is_open() then
-    return
+    if not self:is_partial() then
+      return
+    end
+    -- Some panes were closed by hand; rebuild the whole layout so sizes and
+    -- window IDs are consistent again.
+    self:close()
   end
   local cur_win = api.nvim_get_current_win()
   for i, _ in pairs(self.win_states) do
@@ -162,6 +167,20 @@ function WindowLayout:is_open()
   return false
 end
 
+--- Whether some, but not all, windows of the layout are open.
+---@return boolean
+function WindowLayout:is_partial()
+  local open, closed = false, false
+  for _, win in ipairs(self.opened_wins) do
+    if api.nvim_win_is_valid(win) then
+      open = true
+    else
+      closed = true
+    end
+  end
+  return open and closed
+end
+
 function WindowLayout:toggle()
   if self:is_open() then
     self:close()
@@ -183,7 +202,7 @@ function WindowLayout:_init_win_settings(win)
     spell = false,
   }
   for key, val in pairs(win_settings) do
-    api.nvim_win_set_option(win, key, val)
+    api.nvim_set_option_value(key, val, { win = win })
   end
   api.nvim_win_call(win, function()
     vim.opt.winhighlight:append({ Normal = "DapUINormal", EndOfBuffer = "DapUIEndOfBuffer" })

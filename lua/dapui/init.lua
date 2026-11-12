@@ -423,4 +423,7 @@ function dapui.register_element(name, element)
   end)
 end
 
+-- Debugger source window routing. See |dapui.source_window|.
+dapui.source_window = require("dapui.source")
+
 return dapui

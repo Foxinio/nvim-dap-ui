@@ -82,4 +82,17 @@ describe("checking window layout", function()
       assert.equal(heights[win_config.id], api.nvim_win_get_height(win))
     end
   end)
+
+  it("rebuilds a partially closed layout on open", function()
+    api.nvim_win_close(vim.fn.bufwinid(win_configs[2].id), true)
+    assert.is_true(layout:is_partial())
+    layout:open()
+    assert.is_false(layout:is_partial())
+    for _, win_config in pairs(win_configs) do
+      assert.Not.equal(-1, vim.fn.bufwinnr(win_config.id))
+    end
+    for _, win in ipairs(layout.opened_wins) do
+      assert.is_true(api.nvim_win_is_valid(win))
+    end
+  end)
 end)

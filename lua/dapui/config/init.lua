@@ -20,6 +20,16 @@ local dapui = {}
 --- after initial setup
 ---@field select_window? fun(): integer A function which returns a window to be
 --- used for opening buffers such as a stack frame location.
+---@field source_window dapui.Config.source_window Where stack frame and
+--- breakpoint locations are shown. See |dapui.source_window|.
+
+---@class dapui.Config.source_window
+---@field track boolean Reuse the same window for every navigation until it is
+--- closed, instead of preferring any window that already shows the buffer
+---@field focus boolean Move the cursor into the source window after navigating
+--- from a stack frame or breakpoint
+---@field winbar? string Label shown in the winbar of the tracked window (e.g.
+--- "DAP Source"). Cosmetic only; routing does not depend on it.
 
 ---@class dapui.Config.icons
 ---@field expanded string
@@ -91,6 +101,11 @@ local default_config = {
     watch = "w",
   },
   element_mappings = {},
+  source_window = {
+    track = true,
+    focus = true,
+    winbar = nil,
+  },
   expand_lines = vim.fn.has("nvim-0.7") == 1,
   force_buffers = true,
   layouts = {
