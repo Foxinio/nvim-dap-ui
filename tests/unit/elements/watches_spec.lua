@@ -4,6 +4,8 @@ local Watches = require("dapui.elements.watches")
 local tests = require("dapui.tests")
 tests.bootstrap()
 local mocks = tests.mocks
+-- Neovim 0.12 shows the prompt text in an idle prompt buffer's last line.
+local prompt_line = vim.fn.has("nvim-0.12") == 1 and "> " or ""
 
 describe("watches element", function()
   ---@type dapui.elements.watches
@@ -51,7 +53,7 @@ describe("watches element", function()
   describe("with no expressions", function()
     a.it("renders no expressions lines", function()
       local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
-      assert.same({ "No Expressions", "" }, lines)
+      assert.same({ "No Expressions", prompt_line }, lines)
     end)
     a.it("renders lines after expression update", function()
       local highlights = tests.util.get_highlights(buf)
@@ -66,7 +68,7 @@ describe("watches element", function()
     nio.sleep(10)
     local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
     assert.same(
-      { " a = 'a value'", " b - 1 number = 1", " c table = { d = 1 }", "" },
+      { " a = 'a value'", " b - 1 number = 1", " c table = { d = 1 }", prompt_line },
       lines
     )
   end)
@@ -96,7 +98,7 @@ describe("watches element", function()
       nio.sleep(10)
 
       local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
-      assert.same({ " c table = { d = 1 }", "   d number = 1", "" }, lines)
+      assert.same({ " c table = { d = 1 }", "   d number = 1", prompt_line }, lines)
     end)
     a.it("renders expanded highlights", function()
       watches.add("c")

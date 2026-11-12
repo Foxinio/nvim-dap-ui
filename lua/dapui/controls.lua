@@ -19,7 +19,9 @@ function M.enable_controls(element)
   M.refresh_control_panel = function()
     if win then
       local is_current = win == vim.fn.win_getid()
-      if not pcall(vim.api.nvim_win_set_option, win, "winbar", M.controls(is_current)) then
+      if
+        not pcall(vim.api.nvim_set_option_value, "winbar", M.controls(is_current), { win = win })
+      then
         win = nil
       end
       vim.cmd("redrawstatus!")
@@ -83,7 +85,7 @@ function M.enable_controls(element)
     group = group,
     callback = function()
       local winbar = M.controls(true)
-      vim.api.nvim_win_set_option(vim.api.nvim_get_current_win(), "winbar", winbar)
+      vim.api.nvim_set_option_value("winbar", winbar, { win = vim.api.nvim_get_current_win() })
     end,
   })
   vim.api.nvim_create_autocmd("WinLeave", {
@@ -91,7 +93,7 @@ function M.enable_controls(element)
     group = group,
     callback = function()
       local winbar = M.controls(false)
-      vim.api.nvim_win_set_option(vim.api.nvim_get_current_win(), "winbar", winbar)
+      vim.api.nvim_set_option_value("winbar", winbar, { win = vim.api.nvim_get_current_win() })
     end,
   })
 end

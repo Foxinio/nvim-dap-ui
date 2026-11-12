@@ -129,7 +129,7 @@ end
 ---Apply a render.canvas to a buffer
 ---@param buffer number
 function Canvas:render_buffer(buffer, action_keys)
-  local success, _ = pcall(api.nvim_buf_set_option, buffer, "modifiable", true)
+  local success, _ = pcall(api.nvim_set_option_value, "modifiable", true, { buf = buffer })
   if not success then
     return false
   end
@@ -181,7 +181,7 @@ function Canvas:render_buffer(buffer, action_keys)
     })
   end
   if self.prompt then
-    api.nvim_buf_set_option(buffer, "buftype", "prompt")
+    api.nvim_set_option_value("buftype", "prompt", { buf = buffer })
     vim.fn.prompt_setprompt(buffer, self.prompt.text)
     vim.fn.prompt_setcallback(buffer, function(value)
       vim.cmd("stopinsert")
@@ -195,18 +195,18 @@ function Canvas:render_buffer(buffer, action_keys)
         api.nvim_input("<End>")
       end
     end
-    api.nvim_buf_set_option(buffer, "modified", false)
+    api.nvim_set_option_value("modified", false, { buf = buffer })
     local group = api.nvim_create_augroup("DAPUIPromptSetUnmodified" .. buffer, {})
     api.nvim_create_autocmd({ "ExitPre" }, {
       buffer = buffer,
       group = group,
       callback = function()
-        api.nvim_buf_set_option(buffer, "modified", false)
+        api.nvim_set_option_value("modified", false, { buf = buffer })
       end,
     })
   else
-    api.nvim_buf_set_option(buffer, "modifiable", false)
-    api.nvim_buf_set_option(buffer, "buftype", "nofile")
+    api.nvim_set_option_value("modifiable", false, { buf = buffer })
+    api.nvim_set_option_value("buftype", "nofile", { buf = buffer })
   end
   return true
 end

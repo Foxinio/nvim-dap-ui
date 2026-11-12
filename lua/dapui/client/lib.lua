@@ -25,8 +25,8 @@ return function(client)
           return
         end
         nio.api.nvim_buf_set_lines(buf, 0, 0, true, vim.split(response.content, "\n"))
-        nio.api.nvim_buf_set_option(buf, "bufhidden", "delete")
-        nio.api.nvim_buf_set_option(buf, "modifiable", false)
+        nio.api.nvim_set_option_value("bufhidden", "delete", { buf = buf })
+        nio.api.nvim_set_option_value("modifiable", false, { buf = buf })
         return util.open_buf(buf, line, column)
       end
 

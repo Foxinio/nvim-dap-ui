@@ -4,12 +4,9 @@
 nvim=${NVIM:-nvim}
 init=tests/init.lua
 
-if [ -n "$1" ]; then
-	output=$("$nvim" --headless --noplugin -u "$init" -c "PlenaryBustedFile $1" 2>&1)
-else
-	output=$("$nvim" --headless --noplugin -u "$init" \
-		-c "PlenaryBustedDirectory tests/ {minimal_init = '$init', sequential = true}" 2>&1)
-fi
+target=${1:-tests/}
+output=$("$nvim" --headless --noplugin -u "$init" \
+	-c "PlenaryBustedDirectory $target {minimal_init = '$init', sequential = true}" 2>&1)
 status=$?
 printf '%s\n' "$output"
 
