@@ -1,3 +1,4 @@
 neovim/
 doc/tags
 plenary.nvim/
+.deps/
