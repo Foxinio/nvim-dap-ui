@@ -120,6 +120,10 @@ return function(client, send_ready)
             canvas:add_mapping("open", jump_to_bp)
             canvas:add_mapping("remove", function()
               client.breakpoints.remove(buffer, bp.line)
+              -- Disabled entries only live in our cache; drop them too.
+              if _disabled_breakpoints[buffer] then
+                _disabled_breakpoints[buffer][bp.line] = nil
+              end
               send_ready()
             end)
             canvas:add_mapping("toggle", function()

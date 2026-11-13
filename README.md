@@ -7,6 +7,31 @@ good out of the box configuration.
 
 ![preview](https://user-images.githubusercontent.com/24252670/191198389-a1321363-c0f1-4ff1-b663-ab1350d2b393.png)
 
+## Fork changes
+
+This fork (Foxinio/nvim-dap-ui) tracks upstream and adds:
+
+- **Source window routing** (`source_window` config, `require("dapui").source_window`):
+  stack frame and breakpoint navigation reuse one tracked window instead of
+  any window that happens to show the file. Routing and focusing are separate
+  (`focus = false`, or `source_window.open(buf, line, col, { focus = false })`),
+  lines are clamped to the buffer, and an optional `winbar` label (e.g.
+  `"DAP Source"`) marks the window without renaming buffers. Navigation that
+  would discard unsaved changes under `'nohidden'` is reported, not forced.
+- Removing a disabled breakpoint from the Breakpoints pane removes it for good.
+- Line hover popups are not focusable and ignore the mouse.
+- `open()`/`open({ reset = true })` rebuilds a layout when some of its panes
+  were closed by hand, instead of resizing stale windows.
+- Stack frames render when nvim-dap has no cached frames for a thread.
+- No deprecated option APIs; tested on Neovim 0.11 and 0.12 (`make deps test
+  DEPS_DIR=.deps`).
+
+```lua
+require("dapui").setup({
+  source_window = { track = true, focus = true, winbar = "DAP Source" },
+})
+```
+
 ## Installation
 
 Install with your favourite package manager alongside nvim-dap and nvim-nio

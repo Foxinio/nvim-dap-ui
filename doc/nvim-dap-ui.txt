@@ -5,6 +5,7 @@ nvim-dap-ui                                                        *nvim-dap-ui*
 
   Setup........................................................|dapui.setup()|
   Configuration Options.........................................|dapui.config|
+  Source window..........................................|dapui.source_window|
   Variable Scopes......................................|dapui.elements.scopes|
   Threads and Stack Frames.............................|dapui.elements.stacks|
   REPL...................................................|dapui.elements.repl|
@@ -114,12 +115,18 @@ Default values:
       open = "o",
       remove = "d",
       repl = "r",
-      toggle = "t"
+      toggle = "t",
+      watch = "w"
     },
     render = {
       indent = 1,
       max_value_lines = 100
-    }
+    },
+    source_window = {
+      focus = true,
+      track = true
+    },
+    wrap = false
   }
 <
 Parameters~
@@ -256,6 +263,7 @@ dapui.config                                                      *dapui.config*
 
                                                                   *dapui.Config*
 Fields~
+{wrap} `(boolean)` Whether or not to wrap UI text
 {icons} `(dapui.Config.icons)`
 {mappings} `(table<dapui.Action, string|string[]>)` Keys to trigger actions in elements
 {element_mappings} `(table<string, table<dapui.Action, string|string[]>>)` Per-element overrides of global mappings
@@ -271,6 +279,17 @@ Layouts are opened in the order defined
 after initial setup
 {select_window?} `(fun(): integer)` A function which returns a window to be
 used for opening buffers such as a stack frame location.
+{source_window} `(dapui.Config.source_window)` Where stack frame and
+breakpoint locations are shown. See |dapui.source_window|.
+
+                                                    *dapui.Config.source_window*
+Fields~
+{track} `(boolean)` Reuse the same window for every navigation until it is
+closed, instead of preferring any window that already shows the buffer
+{focus} `(boolean)` Move the cursor into the source window after navigating
+from a stack frame or breakpoint
+{winbar?} `(string)` Label shown in the winbar of the tracked window (e.g.
+"DAP Source"). Cosmetic only; routing does not depend on it.
 
                                                             *dapui.Config.icons*
 Fields~
@@ -339,6 +358,56 @@ Alias~
 
 
 ==============================================================================
+dapui.source_window                                        *dapui.source_window*
+
+
+Debugger source navigation (stack frames, breakpoints) is routed to one
+tracked "source window" per session. The window displays the real file
+buffers, so editing, saving, undo, LSP and Tree-sitter behave as in any
+other window. Routing and focusing are separate: `open` can update the
+window without moving the cursor into it.
+
+Resolution order for the destination window:
+1. The tracked window, while it is valid and in the current tab page.
+2. `select_window()` from the config, when provided.
+3. A window in the current tab page already showing the buffer.
+4. The interactive window picker.
+
+See |dapui.Config.source_window| for the related options.
+
+                                                     *dapui.source_window.get()*
+`get`()
+
+Get the tracked source window.
+Return~
+`(integer|nil)`
+
+                                                     *dapui.source_window.set()*
+`set`({win})
+
+Track `win` as the source window (nil stops tracking).
+Parameters~
+{win} `(integer|nil)`
+
+                                                  *dapui.source_window.OpenArgs*
+Fields~
+{focus?} `(boolean)` Move the cursor into the source window. Defaults to
+`source_window.focus` from the config.
+
+                                                    *dapui.source_window.open()*
+`open`({bufnr}, {line}, {column}, {args})
+
+Show `bufnr` in the source window and place the cursor.
+Parameters~
+{bufnr} `(integer)`
+{line?} `(integer)` 1-based line, clamped to the buffer length
+{column?} `(integer)` 1-based column
+{args?} `(dapui.source_window.OpenArgs)`
+Return~
+`(boolean)` opened
+
+
+==============================================================================
 dapui.elements.scopes                                    *dapui.elements.scopes*
 
 Displays the available scopes and variables within them.
@@ -347,7 +416,6 @@ Mappings:
 - `edit`: Edit the value of a variable
 - `expand`: Toggle showing any children of variable.
 - `repl`: Send variable to REPL
-- `watch`: Send variable to watches
 
 
 ==============================================================================
@@ -429,7 +497,6 @@ Lists all breakpoints currently set.
 Mappings:
 - `open`: Jump to the location the breakpoint is set
 - `toggle`: Enable/disable the selected breakpoint
-- `remove`: Remove breakpoint. Only works on enabled breakpoints.
 
 
 ==============================================================================

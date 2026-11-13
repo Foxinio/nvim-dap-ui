@@ -146,6 +146,14 @@ function M.client(args)
       }
       breakpoints[bufnr] = buf_bps
     end,
+    remove = function(bufnr, line)
+      for i, bp in ipairs(breakpoints[bufnr] or {}) do
+        if bp.line == line then
+          table.remove(breakpoints[bufnr], i)
+          return
+        end
+      end
+    end,
   })
 end
 

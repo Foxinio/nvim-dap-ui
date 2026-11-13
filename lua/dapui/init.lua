@@ -295,9 +295,26 @@ function dapui.open(args)
     for _, win_layout in ipairs(windows.layouts) do
       win_layout:update_sizes()
     end
+    -- Layouts with hand-closed panes are rebuilt from scratch.
+    for i, win_layout in ipairs(windows.layouts) do
+      if (not layout or layout == i) and win_layout:is_partial() then
+        win_layout:close()
+      end
+    end
+    -- Layouts are nested in config order (later ones open first), so open
+    -- layouts before the first one being opened are closed and reopened.
+    local first_closed = layout
+    if not first_closed then
+      for i, win_layout in ipairs(windows.layouts) do
+        if not win_layout:is_open() then
+          first_closed = i
+          break
+        end
+      end
+    end
     local closed = {}
-    if layout then
-      for i = 1, (layout and layout - 1) or #windows.layouts, 1 do
+    if first_closed then
+      for i = 1, first_closed - 1, 1 do
         if windows.layouts[i]:is_open() then
           closed[#closed + 1] = i
           windows.layouts[i]:close()
@@ -422,5 +439,8 @@ function dapui.register_element(name, element)
     element.render()
   end)
 end
+
+-- Debugger source window routing. See |dapui.source_window|.
+dapui.source_window = require("dapui.source")
 
 return dapui

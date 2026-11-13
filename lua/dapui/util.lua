@@ -61,7 +61,7 @@ function M.create_buffer(name, options)
     })
     nio.api.nvim_buf_set_name(buf, name)
     for opt, value in pairs(options) do
-      nio.api.nvim_buf_set_option(buf, opt, value)
+      nio.api.nvim_set_option_value(opt, value, { buf = buf })
     end
     return buf
   end
@@ -83,7 +83,11 @@ function M.notify(msg, level, opts)
       title = "nvim-dap-ui",
       icon = "",
       on_open = function(win)
-        vim.api.nvim_buf_set_option(vim.api.nvim_win_get_buf(win), "filetype", "markdown")
+        vim.api.nvim_set_option_value(
+          "filetype",
+          "markdown",
+          { buf = vim.api.nvim_win_get_buf(win) }
+        )
       end,
     })
   )
@@ -100,7 +104,7 @@ end
 
 local function set_opts(win, opts)
   for opt, value in pairs(opts) do
-    api.nvim_win_set_option(win, opt, value)
+    api.nvim_set_option_value(opt, value, { win = win })
   end
 end
 
@@ -113,7 +117,7 @@ function M.select_win()
       return false
     end
     local buf = api.nvim_win_get_buf(win)
-    return api.nvim_buf_get_option(buf, "buftype") == ""
+    return api.nvim_get_option_value("buftype", { buf = buf }) == ""
   end, api.nvim_tabpage_list_wins(0))
 
   if #windows < 2 then
@@ -126,8 +130,8 @@ function M.select_win()
 
   for i, win in ipairs(windows) do
     overwritten_opts[win] = {
-      statusline = api.nvim_win_get_option(win, "statusline"),
-      winhl = api.nvim_win_get_option(win, "winhl"),
+      statusline = api.nvim_get_option_value("statusline", { win = win }),
+      winhl = api.nvim_get_option_value("winhl", { win = win }),
     }
     set_opts(win, {
       statusline = "%=" .. string.char(64 + i) .. "%=",
@@ -162,28 +166,9 @@ function M.select_win()
   return windows[index]
 end
 
-function M.open_buf(bufnr, line, column)
-  local function set_win_pos(win)
-    if line then
-      api.nvim_win_set_cursor(win, { line, column })
-    end
-    pcall(api.nvim_set_current_win, win)
-  end
-
-  for _, win in pairs(api.nvim_tabpage_list_wins(0)) do
-    if api.nvim_win_get_buf(win) == bufnr then
-      set_win_pos(win)
-      return true
-    end
-  end
-
-  local success, win = pcall(M.select_win)
-  if not success or not win then
-    return false
-  end
-  api.nvim_win_set_buf(win, bufnr)
-  set_win_pos(win)
-  return true
+--- Show a buffer in the debugger source window. See |dapui.source_window|.
+function M.open_buf(bufnr, line, column, args)
+  return require("dapui.source").open(bufnr, line, column, args)
 end
 
 function M.get_selection(start, finish)

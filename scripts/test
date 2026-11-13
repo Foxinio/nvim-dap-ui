@@ -1,20 +1,18 @@
-#!/bin/bash
-tempfile=".test_output.tmp"
+#!/bin/sh
+# Usage: scripts/test [spec-file]. Dependencies come from DEPS_DIR or lazy.nvim's
+# plugin directory (see tests/init.lua).
+nvim=${NVIM:-nvim}
+init=tests/init.lua
 
-if [[ -n $1 ]]; then
-	nvim --headless --noplugin -u tests/init.vim -c "PlenaryBustedFile $1" | tee "${tempfile}"
-else
-	nvim --headless --noplugin -u tests/init.vim -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/init.vim'}" | tee "${tempfile}"
-fi
+target=${1:-tests/}
+output=$("$nvim" --headless --noplugin -u "$init" \
+	-c "PlenaryBustedDirectory $target {minimal_init = '$init', sequential = true}" 2>&1)
+status=$?
+printf '%s\n' "$output"
 
 # Plenary doesn't emit exit code 1 when tests have errors during setup
-errors=$(sed 's/\x1b\[[0-9;]*m//g' "${tempfile}" | awk '/(Errors|Failed) :/ {print $3}' | grep -v '0')
-
-rm "${tempfile}"
-
-if [[ -n $errors ]]; then
-  echo "Tests failed"
-  exit 1
+if [ "$status" -ne 0 ] || printf '%s\n' "$output" | sed 's/\x1b\[[0-9;]*m//g' |
+	grep -Eq '(Failed|Errors) :[[:space:]]*[1-9]'; then
+	echo "Tests failed"
+	exit 1
 fi
-
-exit 0

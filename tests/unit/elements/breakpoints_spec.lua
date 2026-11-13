@@ -103,4 +103,17 @@ describe("breakpoints element", function()
       { "DapUIBreakpointsInfo", 7, 3, 7, 15 },
     }, highlights)
   end)
+
+  a.it("removes a disabled breakpoint", function()
+    local keymaps = tests.util.get_mappings(buf)
+    keymaps.t(3)
+    keymaps = tests.util.get_mappings(buf)
+    keymaps.d(3)
+    nio.sleep(10)
+    local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert.same(
+      { "test_a:", " 1 line_a_1", "", "test_b:", " 2 line_b_2", "   Log Message: here" },
+      lines
+    )
+  end)
 end)

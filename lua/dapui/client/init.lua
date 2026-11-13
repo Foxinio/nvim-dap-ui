@@ -123,9 +123,9 @@ local function create_client(session_factory, breakpoints)
   local request = setmetatable({}, {
     __index = function(_, command)
       return function(args)
-        local start = vim.loop.now()
+        local start = vim.uv.now()
         local err, body = async_request(command, args)
-        local diff = vim.loop.now() - start
+        local diff = vim.uv.now() - start
         if err then
           error(Error(err, { command = command, args = args }))
         elseif body.error then
@@ -136,7 +136,7 @@ local function create_client(session_factory, breakpoints)
     end,
   })
 
-  local listener_prefix = "DAPClient" .. tostring(vim.loop.now())
+  local listener_prefix = "DAPClient" .. tostring(vim.uv.now())
   local listener_count = 0
   local listener_ids = {}
   local listen = setmetatable({}, {

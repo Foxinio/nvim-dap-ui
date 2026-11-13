@@ -18,13 +18,10 @@ return function(client, send_ready)
 
       local current_frame_id = nil
 
+      -- nvim-dap caches frames on session.threads; fall back to requesting them.
       local threads = client.session.threads
-
-      if not threads or not threads[thread_id] then
-        return
-      end
-
-      local frames = threads[thread_id].frames
+      local thread = threads and threads[thread_id]
+      local frames = thread and thread.frames
       if not frames then
         local success, response = pcall(client.request.stackTrace, { threadId = thread_id })
         frames = success and response.stackFrames

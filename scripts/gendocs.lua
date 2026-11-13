@@ -660,6 +660,7 @@ minidoc.generate(
   {
     "./lua/dapui/init.lua",
     "./lua/dapui/config/init.lua",
+    "./lua/dapui/source.lua",
     "./lua/dapui/elements/scopes.lua",
     "./lua/dapui/elements/stacks.lua",
     "./lua/dapui/elements/repl.lua",
