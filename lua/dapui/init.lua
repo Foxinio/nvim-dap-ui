@@ -263,6 +263,47 @@ function dapui.close(args)
   end)
 end
 
+--- Restore the window layouts as they look at the start of a session: every
+--- pane at its configured position and size, showing its own element. Fixes
+--- panes that were resized, closed, moved, swapped or given another buffer.
+--- Only dap-ui windows are closed and reopened; your other windows and splits
+--- stay as they are. The cursor stays in the window it was in. Also available
+--- as `:DapRestoreLayout`.
+function dapui.restore_layout()
+  local current_win = vim.api.nvim_get_current_win()
+  local current_buf = vim.api.nvim_get_current_buf()
+  keep_cmdheight(function()
+    local element_buffers = {}
+    for _, win_layout in ipairs(windows.layouts) do
+      element_buffers = vim.tbl_extend("force", element_buffers, win_layout:element_buffers())
+      win_layout:close()
+      win_layout:reset_sizes()
+    end
+    windows.close_floats()
+    -- Element buffers left in other windows of this tab (e.g. a pane split off).
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if
+        element_buffers[vim.api.nvim_win_get_buf(win)]
+        and #vim.api.nvim_tabpage_list_wins(0) > 1
+      then
+        pcall(vim.api.nvim_win_close, win, true)
+      end
+    end
+  end)
+  dapui.open({ reset = true })
+  if vim.api.nvim_win_is_valid(current_win) then
+    pcall(vim.api.nvim_set_current_win, current_win)
+  else
+    -- The cursor was in a pane: go to the pane now showing the same buffer.
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.api.nvim_win_get_buf(win) == current_buf then
+        vim.api.nvim_set_current_win(win)
+        break
+      end
+    end
+  end
+end
+
 ---@generic T
 ---@param list T[]
 ---@return fun(): number, T
