@@ -20,8 +20,9 @@ This fork (Foxinio/nvim-dap-ui) tracks upstream and adds:
   would discard unsaved changes under `'nohidden'` is reported, not forced.
 - `:DapRestoreLayout` / `require("dapui").restore_layout()` puts every pane back
   at its configured position and size, showing its own element, after panes were
-  resized, closed, moved or given another buffer. Your own windows and splits
-  are kept, and the cursor stays where it was.
+  resized, closed, moved or given another buffer. If the panes are open in
+  another tab, that tab is focused first and everything happens there. Your own
+  windows and splits are kept, and the cursor stays where it was.
 - Removing a disabled breakpoint from the Breakpoints pane removes it for good.
 - Line hover popups are not focusable and ignore the mouse.
 - `open()`/`open({ reset = true })` rebuilds a layout when some of its panes

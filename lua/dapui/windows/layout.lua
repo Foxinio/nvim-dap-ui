@@ -143,6 +143,7 @@ function WindowLayout:update_sizes()
 end
 
 --- Forget remembered sizes; the next open/resize uses the configured ones.
+---@return nil
 function WindowLayout:reset_sizes()
   self.area_state.size = self.area_state.init_size
   for _, win_state in pairs(self.win_states) do
@@ -151,7 +152,7 @@ function WindowLayout:reset_sizes()
 end
 
 --- Buffers shown by this layout's panes.
----@return table<integer, boolean>
+---@return table<integer, boolean> buffers Set of buffer numbers
 function WindowLayout:element_buffers()
   local buffers = {}
   for _, get_buffer in pairs(self.win_bufs) do
@@ -163,6 +164,8 @@ function WindowLayout:element_buffers()
   return buffers
 end
 
+--- Close the layout's open windows.
+---@return nil
 function WindowLayout:close()
   local current_win = api.nvim_get_current_win()
   for _, win in pairs(self.opened_wins) do
@@ -178,6 +181,7 @@ function WindowLayout:close()
   self.opened_wins = {}
 end
 
+--- Whether any window of the layout is open.
 ---@return boolean
 function WindowLayout:is_open()
   for _, win in ipairs(self.opened_wins) do

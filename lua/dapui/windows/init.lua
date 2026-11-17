@@ -188,14 +188,6 @@ function M.open_float(name, element, position, settings)
   return float_win
 end
 
---- Close every floating element window.
-function M.close_floats()
-  for name, float_win in pairs(float_windows) do
-    pcall(float_win.close, float_win, true)
-    float_windows[name] = nil
-  end
-end
-
 function M.close_float(element_name)
   if float_windows[element_name] == nil then
     return

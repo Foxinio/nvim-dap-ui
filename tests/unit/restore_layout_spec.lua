@@ -99,6 +99,32 @@ describe("restore_layout", function()
     assert.equal(dapui.elements.stacks.buffer(), api.nvim_get_current_buf())
   end)
 
+  it("focuses the debugger tab first and restores there", function()
+    local debug_tab = api.nvim_get_current_tabpage()
+    api.nvim_win_set_width(win_of("scopes"), 50)
+    vim.cmd("tabnew")
+    local other_tab = api.nvim_get_current_tabpage()
+    local other_wins = api.nvim_tabpage_list_wins(other_tab)
+
+    dapui.restore_layout()
+
+    assert.equal(debug_tab, api.nvim_get_current_tabpage())
+    assert.same(fresh_shape, shape())
+    assert.same(fresh_sizes, sizes())
+    assert.same(other_wins, api.nvim_tabpage_list_wins(other_tab))
+    vim.cmd("tabclose " .. api.nvim_tabpage_get_number(other_tab))
+  end)
+
+  it("restores in one quick synchronous call", function()
+    api.nvim_win_close(win_of("stacks"), true)
+    api.nvim_win_set_height(win_of("repl"), 3)
+    local start = vim.uv.hrtime()
+    dapui.restore_layout()
+    local elapsed_ms = (vim.uv.hrtime() - start) / 1e6
+    assert.same(fresh_shape, shape())
+    assert.is_true(elapsed_ms < 50, ("restore took %.1f ms"):format(elapsed_ms))
+  end)
+
   it("is available as :DapRestoreLayout", function()
     vim.cmd("runtime plugin/dapui.lua")
     api.nvim_win_close(win_of("stacks"), true)
