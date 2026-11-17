@@ -25,17 +25,25 @@ dapui.source_window = {}
 local tracked
 local group = api.nvim_create_augroup("DapUISourceWindow", { clear = true })
 
+--- The `source_window` section of the config.
+---@return dapui.Config.source_window
 ---@nodoc
 local function config()
   return require("dapui.config").source_window or {}
 end
 
+---@param win integer|nil
+---@return boolean
+---@nodoc
 local function in_current_tab(win)
   return win
     and api.nvim_win_is_valid(win)
     and api.nvim_win_get_tabpage(win) == api.nvim_get_current_tabpage()
 end
 
+--- Show the configured winbar label on `win`.
+---@param win integer
+---@nodoc
 local function set_label(win)
   local label = config().winbar
   if label and label ~= "" and api.nvim_win_is_valid(win) then
@@ -43,6 +51,9 @@ local function set_label(win)
   end
 end
 
+--- Remove our label from `win` (leaves any other winbar alone).
+---@param win integer|nil
+---@nodoc
 local function clear_label(win)
   local label = config().winbar
   if label and win and api.nvim_win_is_valid(win) and vim.wo[win].winbar == label then
@@ -95,7 +106,9 @@ function dapui.source_window.set(win)
   end
 end
 
----@return integer|nil
+--- Window to show `bufnr` in, by the resolution order above.
+---@param bufnr integer
+---@return integer|nil win
 ---@nodoc
 local function resolve(bufnr)
   if config().track ~= false and in_current_tab(tracked) then

@@ -198,6 +198,20 @@ Close one or all of the window layouts
 Parameters~
 {args?} `(dapui.CloseArgs)`
 
+                                                        *dapui.restore_layout()*
+`restore_layout`()
+
+Restore the window layouts as they look at the start of a session: every
+pane at its configured position and size, showing its own element. Fixes
+panes that were resized, closed, moved, swapped or given another buffer.
+Only dap-ui windows are closed and reopened; your other windows and splits
+stay as they are. If the layouts are open in another tab, that tab is
+focused first, and all changes happen there. The cursor stays in the window
+it was in. Also available as `:DapRestoreLayout`.
+
+Everything runs in one synchronous call, so Neovim redraws only once, when
+it returns: no intermediate state is ever shown.
+
                                                                 *dapui.OpenArgs*
 Fields~
 {layout?} `(number)` Index of layout in config

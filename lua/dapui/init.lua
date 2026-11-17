@@ -263,6 +263,100 @@ function dapui.close(args)
   end)
 end
 
+---@class dapui.RestoreTargets
+---@nodoc
+---@field windows integer[] Windows to close: layout panes, plus element buffers shown elsewhere in the tab
+---@field focus_win integer Window that had the cursor
+---@field focus_buf integer Buffer that had the cursor (to find its pane again if `focus_win` is a pane)
+
+--- The tab page showing the layouts, or nil when none are open.
+---@return integer|nil tabpage
+---@nodoc
+local function layouts_tabpage()
+  for _, win_layout in ipairs(windows.layouts) do
+    for _, win in ipairs(win_layout.opened_wins) do
+      if vim.api.nvim_win_is_valid(win) then
+        return vim.api.nvim_win_get_tabpage(win)
+      end
+    end
+  end
+end
+
+--- Read-only: which windows `restore_layout()` closes, and where the cursor goes back.
+---@return dapui.RestoreTargets
+---@nodoc
+local function restore_targets()
+  local targets = {
+    windows = {},
+    focus_win = vim.api.nvim_get_current_win(),
+    focus_buf = vim.api.nvim_get_current_buf(),
+  }
+  local element_buffers = {} --[[@as table<integer, boolean>]]
+  local seen = {} --[[@as table<integer, boolean>]]
+  for _, win_layout in ipairs(windows.layouts) do
+    element_buffers = vim.tbl_extend("force", element_buffers, win_layout:element_buffers())
+    for _, win in ipairs(win_layout.opened_wins) do
+      if vim.api.nvim_win_is_valid(win) and not seen[win] then
+        seen[win] = true
+        table.insert(targets.windows, win)
+      end
+    end
+  end
+  -- Element buffers shown in other windows of this tab (e.g. a pane split off).
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if element_buffers[vim.api.nvim_win_get_buf(win)] and not seen[win] then
+      seen[win] = true
+      table.insert(targets.windows, win)
+    end
+  end
+  return targets
+end
+
+--- Restore the window layouts as they look at the start of a session: every
+--- pane at its configured position and size, showing its own element. Fixes
+--- panes that were resized, closed, moved, swapped or given another buffer.
+--- Only dap-ui windows are closed and reopened; your other windows and splits
+--- stay as they are. If the layouts are open in another tab, that tab is
+--- focused first, and all changes happen there. The cursor stays in the window
+--- it was in. Also available as `:DapRestoreLayout`.
+---
+--- Everything runs in one synchronous call, so Neovim redraws only once, when
+--- it returns: no intermediate state is ever shown.
+function dapui.restore_layout()
+  local tabpage = layouts_tabpage()
+  if tabpage and tabpage ~= vim.api.nvim_get_current_tabpage() then
+    vim.api.nvim_set_current_tabpage(tabpage)
+  end
+  local targets = restore_targets()
+
+  keep_cmdheight(function()
+    for _, win_layout in ipairs(windows.layouts) do
+      win_layout:close() -- also leaves insert mode in a prompt pane (see #33)
+      win_layout:reset_sizes()
+    end
+    for _, win in ipairs(targets.windows) do
+      -- Panes are closed above; this catches element buffers in other windows.
+      -- The last window of a tab can't be closed; open() splits around it.
+      if vim.api.nvim_win_is_valid(win) and #vim.api.nvim_tabpage_list_wins(0) > 1 then
+        pcall(vim.api.nvim_win_close, win, true)
+      end
+    end
+  end)
+  dapui.open({ reset = true })
+
+  if vim.api.nvim_win_is_valid(targets.focus_win) then
+    pcall(vim.api.nvim_set_current_win, targets.focus_win)
+  else
+    -- The cursor was in a pane: go to the pane now showing the same buffer.
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.api.nvim_win_get_buf(win) == targets.focus_buf then
+        vim.api.nvim_set_current_win(win)
+        break
+      end
+    end
+  end
+end
+
 ---@generic T
 ---@param list T[]
 ---@return fun(): number, T
