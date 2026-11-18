@@ -22,6 +22,13 @@ local dapui = {}
 --- used for opening buffers such as a stack frame location.
 ---@field source_window dapui.Config.source_window Where stack frame and
 --- breakpoint locations are shown. See |dapui.source_window|.
+---@field debug_tab dapui.Config.debug_tab Debug in one dedicated tab page.
+--- See |dapui.debug_tab|.
+
+---@class dapui.Config.debug_tab
+---@field enabled boolean Use a dedicated debug tab for the panes, execution
+--- commands and source window (set false for upstream behaviour)
+---@field tabby boolean Name the tab "DEBUGGER (program)" when Tabby.nvim is installed
 
 ---@class dapui.Config.source_window
 ---@field track boolean Reuse the same window for every navigation until it is
@@ -105,6 +112,10 @@ local default_config = {
     track = true,
     focus = true,
     winbar = nil,
+  },
+  debug_tab = {
+    enabled = true,
+    tabby = true,
   },
   expand_lines = vim.fn.has("nvim-0.7") == 1,
   force_buffers = true,

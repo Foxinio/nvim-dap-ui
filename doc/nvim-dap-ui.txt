@@ -6,6 +6,7 @@ nvim-dap-ui                                                        *nvim-dap-ui*
   Setup........................................................|dapui.setup()|
   Configuration Options.........................................|dapui.config|
   Source window..........................................|dapui.source_window|
+  Debug tab..................................................|dapui.debug_tab|
   Variable Scopes......................................|dapui.elements.scopes|
   Threads and Stack Frames.............................|dapui.elements.stacks|
   REPL...................................................|dapui.elements.repl|
@@ -67,6 +68,10 @@ Default values:
         step_over = "",
         terminate = ""
       }
+    },
+    debug_tab = {
+      enabled = true,
+      tabby = true
     },
     element_mappings = {},
     expand_lines = true,
@@ -295,6 +300,14 @@ after initial setup
 used for opening buffers such as a stack frame location.
 {source_window} `(dapui.Config.source_window)` Where stack frame and
 breakpoint locations are shown. See |dapui.source_window|.
+{debug_tab} `(dapui.Config.debug_tab)` Debug in one dedicated tab page.
+See |dapui.debug_tab|.
+
+                                                        *dapui.Config.debug_tab*
+Fields~
+{enabled} `(boolean)` Use a dedicated debug tab for the panes, execution
+commands and source window (set false for upstream behaviour)
+{tabby} `(boolean)` Name the tab "DEBUGGER (program)" when Tabby.nvim is installed
 
                                                     *dapui.Config.source_window*
 Fields~
@@ -419,6 +432,69 @@ Parameters~
 {args?} `(dapui.source_window.OpenArgs)`
 Return~
 `(boolean)` opened
+
+
+==============================================================================
+dapui.debug_tab                                                *dapui.debug_tab*
+
+
+With `debug_tab.enabled` (the default), debugging happens in one dedicated
+tab page: the panes live there, and stack frames and breakpoints are
+shown in its source window. Your editing
+tabs and their splits are left alone. The tab is created on first use,
+reused afterwards and recreated if it was closed.
+
+`open()`, `toggle()` and `restore_layout()` switch to the debug tab before
+changing anything (if you are already in it, the cursor stays where it is);
+`close()` closes the panes there and returns to the tab you were in.
+
+See |dapui.Config.debug_tab| for the options.
+
+                                                     *dapui.debug_tab.enabled()*
+`enabled`()
+
+Whether the debug tab is enabled in the config.
+Return~
+`(boolean)`
+
+                                                     *dapui.debug_tab.tabpage()*
+`tabpage`()
+
+The debug tab page, created if needed.
+Return~
+`(integer)` tabpage
+
+                                               *dapui.debug_tab.source_window()*
+`source_window`()
+
+The debug tab's source window, created if needed. dap-ui shows stack frame
+and breakpoint locations here (it is the default `select_window`).
+Return~
+`(integer)` win
+
+                                                       *dapui.debug_tab.focus()*
+`focus`()
+
+Switch to the debug tab and its source window.
+
+                                                         *dapui.debug_tab.run()*
+`run`({fn}, {...})
+
+Run `fn` in the debug tab: switch to it first unless already there (then
+the cursor stays where it is).
+Parameters~
+{fn} `(fun(...): any)`
+Return~
+`(any)`
+
+                                              *dapui.debug_tab.run_and_return()*
+`run_and_return`({fn}, {...})
+
+Run `fn` in the debug tab, then return to the tab you were in.
+Parameters~
+{fn} `(fun(...): any)`
+Return~
+`(any)`
 
 
 ==============================================================================

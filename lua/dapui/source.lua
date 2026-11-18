@@ -115,8 +115,12 @@ local function resolve(bufnr)
     return tracked
   end
   local cfg = require("dapui.config")
-  if cfg.select_window then
-    local ok, win = pcall(cfg.select_window)
+  local select_window = cfg.select_window
+  if not select_window and require("dapui.debug_tab").enabled() then
+    select_window = require("dapui.debug_tab").source_window
+  end
+  if select_window then
+    local ok, win = pcall(select_window)
     if ok and win and api.nvim_win_is_valid(win) then
       return win
     end

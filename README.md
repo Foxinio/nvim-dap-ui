@@ -23,6 +23,11 @@ This fork (Foxinio/nvim-dap-ui) tracks upstream and adds:
   resized, closed, moved or given another buffer. If the panes are open in
   another tab, that tab is focused first and everything happens there. Your own
   windows and splits are kept, and the cursor stays where it was.
+- **Debug tab** (on by default; `debug_tab = { enabled = false }` restores upstream
+  behaviour): the panes and the source window live in one dedicated tab,
+  created on first use and reused. `open()`/`toggle()`/`restore_layout()` switch
+  to it first, `close()` returns to the tab you were in, and Tabby.nvim (if
+  installed) names it `DEBUGGER (program)`.
 - Removing a disabled breakpoint from the Breakpoints pane removes it for good.
 - Line hover popups are not focusable and ignore the mouse.
 - `open()`/`open({ reset = true })` rebuilds a layout when some of its panes
