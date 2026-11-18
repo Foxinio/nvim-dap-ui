@@ -16,7 +16,7 @@ describe("source window", function()
   before_each(function()
     vim.cmd("silent! only")
     vim.o.hidden = true
-    config.setup({})
+    config.setup({ debug_tab = { enabled = false } })
     source_window.set(nil)
     file_a, buf_a = new_file({ "a1", "a2", "a3" })
     file_b, buf_b = new_file({ "b1", "b2" })
@@ -60,7 +60,7 @@ describe("source window", function()
   end)
 
   it("respects focus = false in the config", function()
-    config.setup({ source_window = { focus = false } })
+    config.setup({ debug_tab = { enabled = false }, source_window = { focus = false } })
     local main = api.nvim_get_current_win()
     source_window.set(main)
     vim.cmd("vsplit")
@@ -76,6 +76,7 @@ describe("source window", function()
     api.nvim_win_close(tracked, true)
     local chosen = api.nvim_get_current_win()
     config.setup({
+      debug_tab = { enabled = false },
       select_window = function()
         return chosen
       end,
@@ -85,7 +86,7 @@ describe("source window", function()
   end)
 
   it("labels only the tracked window", function()
-    config.setup({ source_window = { winbar = "DAP Source" } })
+    config.setup({ debug_tab = { enabled = false }, source_window = { winbar = "DAP Source" } })
     local main = api.nvim_get_current_win()
     source_window.open(buf_a, 1, 1)
     assert.equal("DAP Source", vim.wo[main].winbar)

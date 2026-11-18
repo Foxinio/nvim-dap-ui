@@ -537,4 +537,21 @@ end
 -- Debugger source window routing. See |dapui.source_window|.
 dapui.source_window = require("dapui.source")
 
+-- With the debug tab enabled, pane operations happen in it. See |dapui.debug_tab|.
+dapui.debug_tab = require("dapui.debug_tab")
+for name, run in pairs({
+  open = dapui.debug_tab.run,
+  toggle = dapui.debug_tab.run,
+  restore_layout = dapui.debug_tab.run,
+  close = dapui.debug_tab.run_and_return,
+}) do
+  local impl = dapui[name]
+  dapui[name] = function(...)
+    if not dapui.debug_tab.enabled() then
+      return impl(...)
+    end
+    return run(impl, ...)
+  end
+end
+
 return dapui

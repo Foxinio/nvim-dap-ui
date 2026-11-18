@@ -44,7 +44,11 @@ describe("restore_layout", function()
   local fresh_shape, fresh_sizes, editor
   before_each(function()
     vim.cmd("silent! tabonly | silent! only")
-    dapui.setup({ layouts = layouts, controls = { enabled = false } })
+    dapui.setup({
+      layouts = layouts,
+      controls = { enabled = false },
+      debug_tab = { enabled = false },
+    })
     editor = api.nvim_get_current_win()
     dapui.open()
     fresh_shape, fresh_sizes = shape(), sizes()
