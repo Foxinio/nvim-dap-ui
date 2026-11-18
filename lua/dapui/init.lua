@@ -113,6 +113,7 @@ function dapui.setup(user_config)
     element_buffers[name] = elem.buffer
   end
   windows.setup(element_buffers)
+  require("dapui.debug_tab").setup()
 end
 
 ---@class dapui.FloatElementArgs
