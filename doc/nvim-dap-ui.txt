@@ -533,6 +533,14 @@ Parameters~
 {line} `(integer)`
 {column} `(integer)`
 
+                                                       *dapui.debug_tab.clean()*
+`clean`()
+
+Terminate debugging, clear nvim-dap-virtual-text annotations (if
+installed), close the panes and the REPL. Safe to repeat, also after the
+session ended. Source tabs, file buffers and breakpoints are kept.
+Also available as `:DapClean`.
+
 
 ==============================================================================
 dapui.elements.scopes                                    *dapui.elements.scopes*

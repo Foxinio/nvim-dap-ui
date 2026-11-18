@@ -164,6 +164,26 @@ describe("debug tab", function()
     vim.cmd("stopinsert")
   end)
 
+  it(":DapClean terminates and closes panes and the REPL", function()
+    dapui.open()
+    local terminate, repl_close = dap.terminate, dap.repl.close
+    local terminated, repl_closed = false, false
+    dap.terminate = function(opts)
+      terminated = true
+      opts.on_done()
+    end
+    dap.repl.close = function()
+      repl_closed = true
+    end
+    vim.cmd("runtime plugin/dapui.lua")
+    api.nvim_set_current_tabpage(original_tab)
+    vim.cmd("DapClean")
+    dap.terminate, dap.repl.close = terminate, repl_close
+    assert.is_true(terminated and repl_closed)
+    assert.is_nil(pane("scopes"))
+    assert.equal(original_tab, api.nvim_get_current_tabpage())
+  end)
+
   it("behaves like upstream when disabled", function()
     dapui.setup({
       layouts = layouts,
