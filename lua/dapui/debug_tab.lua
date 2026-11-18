@@ -5,8 +5,8 @@ local api = vim.api
 
 ---@text
 --- With `debug_tab.enabled` (the default), debugging happens in one dedicated
---- tab page: the panes live there, and stack frames and breakpoints are
---- shown in its source window. Your editing
+--- tab page: the panes live there, execution commands run there, and stack
+--- frames, breakpoints and stops are shown in its source window. Your editing
 --- tabs and their splits are left alone. The tab is created on first use,
 --- reused afterwards and recreated if it was closed.
 ---
@@ -168,6 +168,79 @@ function dapui.debug_tab.run_and_return(fn, ...)
     api.nvim_set_current_tabpage(previous)
   end
   return result
+end
+
+---@class dapui.debug_tab.ActionArgs
+---@field use_cursor? boolean Also bring the invoking buffer and cursor into
+--- the source window (always done while no session is running)
+
+--- Wrap `callback` (e.g. a step or continue) so it runs in the debug tab. The
+--- invoking cwd is kept as the tab's cwd, so relative paths resolve the same.
+---@param callback fun(...): any
+---@param args? dapui.debug_tab.ActionArgs
+---@return fun(...): any
+function dapui.debug_tab.action(callback, args)
+  args = args or {}
+  return function(...)
+    local buffer = api.nvim_get_current_buf()
+    local cursor = api.nvim_win_get_cursor(0)
+    local cwd = vim.fn.getcwd()
+    dapui.debug_tab.focus()
+    vim.cmd.tcd(vim.fn.fnameescape(cwd))
+    if args.use_cursor or not require("dap").session() then
+      api.nvim_win_set_buf(source --[[@as integer]], buffer)
+      api.nvim_win_set_cursor(source --[[@as integer]], cursor)
+    end
+    return callback(...)
+  end
+end
+
+--- Toggle the nvim-dap REPL in the debug tab.
+function dapui.debug_tab.repl()
+  dapui.debug_tab.focus()
+  require("dap").repl.toggle()
+end
+
+--- Show `bufnr` at `line`/`column` in the source window. Used as nvim-dap's
+--- `switchbuf` so stops land there; from the REPL the cursor stays in the REPL.
+---@param bufnr integer
+---@param line integer
+---@param column integer
+function dapui.debug_tab.jump(bufnr, line, column)
+  if vim.bo.filetype == "dap-repl" then
+    ensure()
+  else
+    dapui.debug_tab.focus()
+  end
+  api.nvim_win_set_buf(source --[[@as integer]], bufnr)
+  -- Missing library sources can have fewer lines than the debugger reports.
+  line = math.max(1, math.min(line, api.nvim_buf_line_count(bufnr)))
+  api.nvim_win_set_cursor(source --[[@as integer]], { line, math.max(0, column - 1) })
+end
+
+--- Hook into nvim-dap: route stops to the source window and open the panes,
+--- with the REPL focused, when a session starts (each per config).
+---@nodoc
+function dapui.debug_tab.setup()
+  if not dapui.debug_tab.enabled() then
+    return
+  end
+  local dap = require("dap")
+  if config().route_stops ~= false then
+    dap.defaults.fallback.switchbuf = dapui.debug_tab.jump
+  end
+  dap.listeners.after.event_initialized["dapui.debug_tab"] = config().open_on_start ~= false
+      and function()
+        require("dapui").open()
+        for _, win in ipairs(api.nvim_tabpage_list_wins(0)) do
+          if vim.bo[api.nvim_win_get_buf(win)].filetype == "dap-repl" then
+            api.nvim_set_current_win(win)
+            vim.cmd.startinsert({ bang = true })
+            break
+          end
+        end
+      end
+    or nil
 end
 
 return dapui.debug_tab
