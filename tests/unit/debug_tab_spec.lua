@@ -106,6 +106,45 @@ describe("debug tab", function()
     assert.is_nil(names[original_tab])
   end)
 
+  it("runs actions in the debug tab, optionally with the invoking cursor", function()
+    local buffer = api.nvim_get_current_buf()
+    api.nvim_buf_set_lines(buffer, 0, -1, false, { "one", "two", "three" })
+    api.nvim_win_set_cursor(0, { 2, 1 })
+    dap.session = function()
+      return {}
+    end
+    local seen
+    debug_tab.action(function(value)
+      seen = value
+      assert.equal(debug_tab.tabpage(), api.nvim_get_current_tabpage())
+    end)("forwarded")
+    assert.equal("forwarded", seen)
+
+    api.nvim_set_current_tabpage(original_tab)
+    debug_tab.action(function()
+      assert.equal(buffer, api.nvim_get_current_buf())
+      assert.same({ 2, 1 }, api.nvim_win_get_cursor(0))
+    end, { use_cursor = true })()
+  end)
+
+  it("routes stops to the source window, clamping lines, keeping REPL focus", function()
+    local target = api.nvim_create_buf(false, true)
+    api.nvim_buf_set_lines(target, 0, -1, false, { "first", "second" })
+    debug_tab.jump(target, 1000, 1)
+    assert.equal(debug_tab.tabpage(), api.nvim_get_current_tabpage())
+    assert.equal(target, api.nvim_get_current_buf())
+    assert.same({ 2, 0 }, api.nvim_win_get_cursor(0))
+
+    dapui.open()
+    api.nvim_set_current_win(pane("repl"))
+    vim.bo.filetype = "dap-repl"
+    local repl_win = api.nvim_get_current_win()
+    debug_tab.jump(target, 1, 1)
+    assert.equal(repl_win, api.nvim_get_current_win())
+    assert.equal(target, api.nvim_win_get_buf(debug_tab.source_window()))
+    assert.equal(dap.defaults.fallback.switchbuf, debug_tab.jump)
+  end)
+
   it("reuses a surviving window when the source window was closed", function()
     dapui.open()
     local source = debug_tab.source_window()
@@ -116,6 +155,13 @@ describe("debug tab", function()
     local count = #api.nvim_tabpage_list_wins(debug_tab.tabpage())
     assert.equal(survivor, debug_tab.source_window())
     assert.equal(count, #api.nvim_tabpage_list_wins(debug_tab.tabpage()))
+  end)
+
+  it("opens the panes and focuses the REPL when a session starts", function()
+    dap.listeners.after.event_initialized["dapui.debug_tab"]()
+    assert.equal(debug_tab.tabpage(), api.nvim_get_current_tabpage())
+    assert.is_truthy(pane("scopes"))
+    vim.cmd("stopinsert")
   end)
 
   it("behaves like upstream when disabled", function()

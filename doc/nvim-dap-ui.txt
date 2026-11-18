@@ -71,6 +71,8 @@ Default values:
     },
     debug_tab = {
       enabled = true,
+      open_on_start = true,
+      route_stops = true,
       tabby = true
     },
     element_mappings = {},
@@ -307,6 +309,10 @@ See |dapui.debug_tab|.
 Fields~
 {enabled} `(boolean)` Use a dedicated debug tab for the panes, execution
 commands and source window (set false for upstream behaviour)
+{route_stops} `(boolean)` Show nvim-dap stops in the debug tab's source
+window (sets `dap.defaults.fallback.switchbuf`)
+{open_on_start} `(boolean)` Open the panes in the debug tab, with the REPL
+focused, when a session starts
 {tabby} `(boolean)` Name the tab "DEBUGGER (program)" when Tabby.nvim is installed
 
                                                     *dapui.Config.source_window*
@@ -439,8 +445,8 @@ dapui.debug_tab                                                *dapui.debug_tab*
 
 
 With `debug_tab.enabled` (the default), debugging happens in one dedicated
-tab page: the panes live there, and stack frames and breakpoints are
-shown in its source window. Your editing
+tab page: the panes live there, execution commands run there, and stack
+frames, breakpoints and stops are shown in its source window. Your editing
 tabs and their splits are left alone. The tab is created on first use,
 reused afterwards and recreated if it was closed.
 
@@ -495,6 +501,37 @@ Parameters~
 {fn} `(fun(...): any)`
 Return~
 `(any)`
+
+                                                    *dapui.debug_tab.ActionArgs*
+Fields~
+{use_cursor?} `(boolean)` Also bring the invoking buffer and cursor into
+the source window (always done while no session is running)
+
+                                                      *dapui.debug_tab.action()*
+`action`({callback}, {args})
+
+Wrap `callback` (e.g. a step or continue) so it runs in the debug tab. The
+invoking cwd is kept as the tab's cwd, so relative paths resolve the same.
+Parameters~
+{callback} `(fun(...): any)`
+{args?} `(dapui.debug_tab.ActionArgs)`
+Return~
+`(fun(...): any)`
+
+                                                        *dapui.debug_tab.repl()*
+`repl`()
+
+Toggle the nvim-dap REPL in the debug tab.
+
+                                                        *dapui.debug_tab.jump()*
+`jump`({bufnr}, {line}, {column})
+
+Show `bufnr` at `line`/`column` in the source window. Used as nvim-dap's
+`switchbuf` so stops land there; from the REPL the cursor stays in the REPL.
+Parameters~
+{bufnr} `(integer)`
+{line} `(integer)`
+{column} `(integer)`
 
 
 ==============================================================================

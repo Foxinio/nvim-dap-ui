@@ -28,6 +28,10 @@ local dapui = {}
 ---@class dapui.Config.debug_tab
 ---@field enabled boolean Use a dedicated debug tab for the panes, execution
 --- commands and source window (set false for upstream behaviour)
+---@field route_stops boolean Show nvim-dap stops in the debug tab's source
+--- window (sets `dap.defaults.fallback.switchbuf`)
+---@field open_on_start boolean Open the panes in the debug tab, with the REPL
+--- focused, when a session starts
 ---@field tabby boolean Name the tab "DEBUGGER (program)" when Tabby.nvim is installed
 
 ---@class dapui.Config.source_window
@@ -115,6 +119,8 @@ local default_config = {
   },
   debug_tab = {
     enabled = true,
+    route_stops = true,
+    open_on_start = true,
     tabby = true,
   },
   expand_lines = vim.fn.has("nvim-0.7") == 1,
