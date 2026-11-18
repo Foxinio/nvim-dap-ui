@@ -30,7 +30,8 @@ This fork (Foxinio/nvim-dap-ui) tracks upstream and adds:
   in. nvim-dap stops are shown in its source window, the panes open with the REPL
   focused when a session starts, `require("dapui").debug_tab.action(fn)` wraps
   commands to run there, and Tabby.nvim (if installed) names it
-  `DEBUGGER (program)`.
+  `DEBUGGER (program)`. `:DapClean` terminates debugging and closes the panes and
+  REPL (clearing nvim-dap-virtual-text annotations if installed).
 - Removing a disabled breakpoint from the Breakpoints pane removes it for good.
 - Line hover popups are not focusable and ignore the mouse.
 - `open()`/`open({ reset = true })` rebuilds a layout when some of its panes

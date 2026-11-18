@@ -218,6 +218,24 @@ function dapui.debug_tab.jump(bufnr, line, column)
   api.nvim_win_set_cursor(source --[[@as integer]], { line, math.max(0, column - 1) })
 end
 
+--- Terminate debugging, clear nvim-dap-virtual-text annotations (if
+--- installed), close the panes and the REPL. Safe to repeat, also after the
+--- session ended. Source tabs, file buffers and breakpoints are kept.
+--- Also available as `:DapClean`.
+function dapui.debug_tab.clean()
+  local function clear()
+    local ok, virtual_text = pcall(require, "nvim-dap-virtual-text/virtual_text")
+    if ok then
+      virtual_text.clear_virtual_text()
+      virtual_text.clear_last_frames()
+    end
+    require("dapui").close()
+    require("dap").repl.close()
+  end
+  require("dap").terminate({ on_done = clear })
+  clear()
+end
+
 --- Hook into nvim-dap: route stops to the source window and open the panes,
 --- with the REPL focused, when a session starts (each per config).
 ---@nodoc
