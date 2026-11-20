@@ -12,6 +12,7 @@ nvim-dap-ui                                                        *nvim-dap-ui*
   REPL...................................................|dapui.elements.repl|
   Watch Expressions...................................|dapui.elements.watches|
   Breakpoints.....................................|dapui.elements.breakpoints|
+  Breakpoint properties....................................|dapui.breakpoints|
   Console.............................................|dapui.elements.console|
 
 A UI for nvim-dap which provides a good out of the box configuration.
@@ -631,7 +632,50 @@ Lists all breakpoints currently set.
 
 Mappings:
 - `open`: Jump to the location the breakpoint is set
-- `toggle`: Enable/disable the selected breakpoint
+- `toggle`: Enable/disable the selected breakpoint. A disabled breakpoint
+  stays in nvim-dap's list but is not sent to the debug adapter.
+- `remove`: Remove the selected breakpoint
+- `expand`: Show/hide every property of the selected breakpoint
+- `edit`: On an expanded property, change it (text is prompted for,
+  true/false flips, custom properties open their own editor)
+
+Other plugins can add properties; see |dapui.breakpoints|.
+
+
+==============================================================================
+dapui.breakpoints                                            *dapui.breakpoints*
+
+Extra properties for nvim-dap breakpoints, and control over which breakpoints
+are sent to the debug adapter: `require("dapui.breakpoints")`.
+
+nvim-dap stays the only owner of the breakpoint list, of positions and of
+`condition`, `hitCondition` and `logMessage`; the properties `condition`,
+`hit_condition` and `log_message` read and write nvim-dap directly. Other
+properties are stored here, and a breakpoint has a record only while one of
+them differs from its default. A disabled breakpoint, or one a rule holds
+back, stays in nvim-dap's list and shows the `DapBreakpointInactive` sign (○).
+The module only needs nvim-dap and works without |dapui.setup()|.
+
+Functions:
+- `register(name, spec)`: add a property. `spec` fields: `label`, `type`
+  ("string", "boolean", "integer" or "custom"), `default`, and optionally
+  `edit(bp, current, set)` (editor for custom properties), `format(value, bp)`,
+  `summary(value, bp)` (line under a collapsed breakpoint) and
+  `sign(value, bp)` (returns `{ text, highlight }` while active).
+- `properties()`: registered properties in display order.
+- `get(bufnr, line, name?)`, `set(bufnr, line, name, value)`: read or write
+  properties. Setting the default removes it.
+- `is_active(bufnr, line)`: whether the breakpoint is sent to the adapter.
+- `add_rule(name, fn)`, `remove_rule(name)`: a breakpoint is sent only while
+  it is enabled and every rule returns true for it.
+- `refresh(bufnr?)`: send breakpoints to every session again, after a rule
+  result changed.
+- `handle(bufnr, line)`, `locate(handle)`, `release(handle)`: a stable
+  reference to a breakpoint that follows it through edits.
+- `list()`: every breakpoint with its properties, grouped by buffer.
+- `remove(bufnr, line)`: remove a breakpoint and its properties.
+
+Changes fire the `User DapUIBreakpointsChanged` autocommand.
 
 
 ==============================================================================

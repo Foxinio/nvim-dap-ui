@@ -1,10 +1,59 @@
 local config = require("dapui.config")
 local nio = require("nio")
 local util = require("dapui.util")
+local store = require("dapui.breakpoints")
+
+local function format_value(property, value, bp)
+  if property.format then
+    return property.format(value, bp)
+  end
+  if value == nil or value == "" then
+    return "(none)"
+  end
+  if type(value) == "table" then
+    return vim.inspect(value)
+  end
+  return tostring(value)
+end
+
+local function edit_property(bp, property, current)
+  local function set(value)
+    store.set(bp.buf, bp.line, property.name, value)
+  end
+  if property.type == "boolean" then
+    set(not current)
+  elseif property.type == "custom" then
+    if property.edit then
+      property.edit(bp, current, set)
+    end
+  else
+    vim.ui.input({
+      prompt = property.label .. ": ",
+      default = current ~= nil and tostring(current) or "",
+    }, function(input)
+      if input == nil then
+        return
+      end
+      if property.type == "integer" then
+        if input == "" then
+          return set(nil)
+        end
+        local number = tonumber(input)
+        if not number or number % 1 ~= 0 then
+          vim.notify("Expected a whole number for " .. property.label, vim.log.levels.WARN)
+          return
+        end
+        return set(number)
+      end
+      set(input ~= "" and input or nil)
+    end)
+  end
+end
 
 ---@param client dapui.DAPClient
 return function(client, send_ready)
-  local _disabled_breakpoints = {}
+  ---@type table<string, boolean>
+  local expanded = {}
 
   for _, event in ipairs({
     "setBreakpoints",
@@ -19,77 +68,14 @@ return function(client, send_ready)
   }) do
     client.listen[event](send_ready)
   end
-
-  ---@param bp dapui.types.DAPBreakpoint
-  local function _toggle(bufnr, bp)
-    client.breakpoints.toggle(bufnr, bp.line, {
-      condition = bp.condition,
-      hit_condition = bp.hitCondition,
-      log_message = bp.logMessage,
-    })
-
-    local buffer_breakpoints = client.breakpoints.get_buf(bufnr)
-    local enabled = false
-    for _, buf_bp in ipairs(buffer_breakpoints) do
-      if buf_bp.line == bp.line then
-        enabled = true
-        break
-      end
-    end
-
-    if not _disabled_breakpoints[bufnr] then
-      _disabled_breakpoints[bufnr] = {}
-    end
-
-    if not enabled then
-      bp.enabled = false
-      _disabled_breakpoints[bufnr][bp.line] = bp
-    else
-      _disabled_breakpoints[bufnr][bp.line] = nil
-    end
-    send_ready()
-  end
-
-  local function _get_breakpoints()
-    ---@type table<integer, dapui.types.DAPBreakpoint[]>
-    local bps = client.breakpoints.get()
-    local merged_breakpoints = {}
-    local buffers = {}
-    for buf, _ in pairs(bps) do
-      buffers[buf] = true
-    end
-    for bufnr, _ in pairs(_disabled_breakpoints) do
-      buffers[bufnr] = true
-    end
-    for bufnr, _ in pairs(buffers) do
-      local buf_points = bps[bufnr] or {}
-      for _, bp in ipairs(buf_points) do
-        bp.enabled = true
-        if _disabled_breakpoints[bufnr] then
-          _disabled_breakpoints[bufnr][bp.line] = nil
-        end
-      end
-      merged_breakpoints[bufnr] = buf_points
-      for _, bp in pairs(_disabled_breakpoints[bufnr] or {}) do
-        table.insert(merged_breakpoints[bufnr], bp)
-      end
-      table.sort(merged_breakpoints[bufnr], function(a, b)
-        return a.line < b.line
-      end)
-    end
-    local sorted = {}
-    for buffer, breakpoints in pairs(merged_breakpoints) do
-      sorted[#sorted + 1] = {
-        name = nio.api.nvim_buf_get_name(buffer),
-        buffer = buffer,
-        breakpoints = breakpoints,
-      }
-    end
-    table.sort(sorted, function(a, b)
-      return a.name < b.name
-    end)
-    return sorted
-  end
+  -- One Breakpoints element at a time: a new one replaces the old redraw hook.
+  vim.api.nvim_create_autocmd("User", {
+    group = vim.api.nvim_create_augroup("dapui_breakpoints_element", { clear = true }),
+    pattern = "DapUIBreakpointsChanged",
+    callback = function()
+      send_ready()
+    end,
+  })
 
   return {
     ---@param canvas dapui.Canvas
@@ -102,36 +88,39 @@ return function(client, send_ready)
         current_line = current_frame.line
       end
       local indent = config.render.indent
-      for _, data in ipairs(_get_breakpoints()) do
+      local properties = store.properties()
+      for _, data in ipairs(store.list()) do
         local buffer, bufname = data.buffer, data.name
-        ---@type dapui.types.DAPBreakpoint[]
-        local breakpoints = data.breakpoints
         local name = util.pretty_name(bufname)
         canvas:write(name, { group = "DapUIBreakpointsPath" })
         canvas:write(":\n")
 
-        for _, bp in ipairs(breakpoints) do
+        for _, entry in ipairs(data.breakpoints) do
+          local bp = entry.breakpoint
           local text = vim.api.nvim_buf_get_lines(buffer, bp.line - 1, bp.line, false)
+          local key = buffer .. ":" .. bp.line
           local jump_to_bp = util.partial(
             client.lib.jump_to_frame,
             { line = bp.line, column = 0, source = { path = bufname } }
           )
-          if vim.tbl_count(text) ~= 0 then
+          local function add_bp_mappings()
             canvas:add_mapping("open", jump_to_bp)
             canvas:add_mapping("remove", function()
-              client.breakpoints.remove(buffer, bp.line)
-              -- Disabled entries only live in our cache; drop them too.
-              if _disabled_breakpoints[buffer] then
-                _disabled_breakpoints[buffer][bp.line] = nil
-              end
-              send_ready()
+              store.remove(buffer, bp.line)
             end)
             canvas:add_mapping("toggle", function()
-              _toggle(buffer, bp)
+              store.set(buffer, bp.line, "enabled", not entry.properties.enabled)
             end)
+            canvas:add_mapping("expand", function()
+              expanded[key] = not expanded[key] or nil
+              send_ready()
+            end)
+          end
+          if vim.tbl_count(text) ~= 0 then
+            add_bp_mappings()
             canvas:write(string.rep(" ", indent))
             local group
-            if _disabled_breakpoints[buffer] and _disabled_breakpoints[buffer][bp.line] then
+            if not entry.active then
               group = "DapUIBreakpointsDisabledLine"
             elseif bp.line == current_line and name == current_file then
               group = "DapUIBreakpointsCurrentLine"
@@ -145,20 +134,61 @@ return function(client, send_ready)
             local whitespace = string.rep(" ", info_indent)
 
             local function add_info(message, data)
-              canvas:add_mapping("open", jump_to_bp)
+              add_bp_mappings()
               canvas:write(whitespace)
               canvas:write(message, { group = "DapUIBreakpointsInfo" })
               canvas:write(" " .. data .. "\n")
             end
 
-            if bp.logMessage then
-              add_info("Log Message:", bp.logMessage)
-            end
-            if bp.condition then
-              add_info("Condition:", bp.condition)
-            end
-            if bp.hitCondition then
-              add_info("Hit Condition:", bp.hitCondition)
+            if expanded[key] then
+              for _, property in ipairs(properties) do
+                local value = entry.properties[property.name]
+                canvas:add_mapping("open", jump_to_bp)
+                canvas:add_mapping("expand", function()
+                  expanded[key] = nil
+                  send_ready()
+                end)
+                canvas:add_mapping("edit", function()
+                  edit_property(bp, property, value)
+                end)
+                canvas:write(whitespace)
+                canvas:write(property.label .. ":", { group = "DapUIBreakpointsInfo" })
+                canvas:write(" " .. format_value(property, value, bp) .. "\n")
+              end
+            else
+              if bp.logMessage then
+                add_info("Log Message:", bp.logMessage)
+              end
+              if bp.condition then
+                add_info("Condition:", bp.condition)
+              end
+              if bp.hitCondition then
+                add_info("Hit Condition:", bp.hitCondition)
+              end
+              for _, property in ipairs(properties) do
+                local value = entry.properties[property.name]
+                if
+                  not property.virtual
+                  and property.name ~= "enabled"
+                  and not vim.deep_equal(value, property.default)
+                then
+                  local summary
+                  if property.summary then
+                    summary = property.summary(value, bp)
+                  else
+                    summary = property.label .. ": " .. format_value(property, value, bp)
+                  end
+                  if summary then
+                    local label, rest = summary:match("^([^:]+:)%s*(.*)$")
+                    if label then
+                      add_info(label, rest)
+                    else
+                      add_bp_mappings()
+                      canvas:write(whitespace .. summary .. "\n")
+                    end
+                  end
+                end
+              end
             end
           end
         end
