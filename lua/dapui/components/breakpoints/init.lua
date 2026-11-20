@@ -2,53 +2,7 @@ local config = require("dapui.config")
 local nio = require("nio")
 local util = require("dapui.util")
 local store = require("dapui.breakpoints")
-
-local function format_value(property, value, bp)
-  if property.format then
-    return property.format(value, bp)
-  end
-  if value == nil or value == "" then
-    return "(none)"
-  end
-  if type(value) == "table" then
-    return vim.inspect(value)
-  end
-  return tostring(value)
-end
-
-local function edit_property(bp, property, current)
-  local function set(value)
-    store.set(bp.buf, bp.line, property.name, value)
-  end
-  if property.type == "boolean" then
-    set(not current)
-  elseif property.type == "custom" then
-    if property.edit then
-      property.edit(bp, current, set)
-    end
-  else
-    vim.ui.input({
-      prompt = property.label .. ": ",
-      default = current ~= nil and tostring(current) or "",
-    }, function(input)
-      if input == nil then
-        return
-      end
-      if property.type == "integer" then
-        if input == "" then
-          return set(nil)
-        end
-        local number = tonumber(input)
-        if not number or number % 1 ~= 0 then
-          vim.notify("Expected a whole number for " .. property.label, vim.log.levels.WARN)
-          return
-        end
-        return set(number)
-      end
-      set(input ~= "" and input or nil)
-    end)
-  end
-end
+local values = require("dapui.components.breakpoints.properties")
 
 ---@param client dapui.DAPClient
 return function(client, send_ready)
@@ -149,11 +103,11 @@ return function(client, send_ready)
                   send_ready()
                 end)
                 canvas:add_mapping("edit", function()
-                  edit_property(bp, property, value)
+                  values.edit(bp, property, value)
                 end)
                 canvas:write(whitespace)
                 canvas:write(property.label .. ":", { group = "DapUIBreakpointsInfo" })
-                canvas:write(" " .. format_value(property, value, bp) .. "\n")
+                canvas:write(" " .. values.format(property, value, bp) .. "\n")
               end
             else
               if bp.logMessage then
@@ -176,7 +130,7 @@ return function(client, send_ready)
                   if property.summary then
                     summary = property.summary(value, bp)
                   else
-                    summary = property.label .. ": " .. format_value(property, value, bp)
+                    summary = property.label .. ": " .. values.format(property, value, bp)
                   end
                   if summary then
                     local label, rest = summary:match("^([^:]+:)%s*(.*)$")
