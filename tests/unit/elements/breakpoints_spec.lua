@@ -45,7 +45,7 @@ describe("breakpoints element", function()
       nio.api.nvim_buf_set_name(path_buf, path)
       nio.api.nvim_buf_set_lines(path_buf, 0, -1, false, data.lines)
       for line, bp in pairs(data.bps) do
-        client.breakpoints.toggle(path_buf, line, bp)
+        require("dap.breakpoints").toggle(vim.deepcopy(bp), path_buf, line)
       end
     end
     breakpoints = Breakpoints(client)
@@ -60,6 +60,7 @@ describe("breakpoints element", function()
       pcall(vim.api.nvim_buf_delete, path_buf, { force = true })
     end
     breakpoints = nil
+    require("dap.breakpoints").clear()
   end)
 
   a.it("renders lines", function()
@@ -115,5 +116,136 @@ describe("breakpoints element", function()
       { "test_a:", " 1 line_a_1", "", "test_b:", " 2 line_b_2", "   Log Message: here" },
       lines
     )
+  end)
+  a.it("keeps a disabled breakpoint in nvim-dap but does not send it", function()
+    local keymaps = tests.util.get_mappings(buf)
+    keymaps.t(3)
+    local path_buf = vim.fn.bufnr("test_a")
+    local bps = require("dap.breakpoints").get(path_buf)[path_buf]
+    assert.same(2, #bps)
+    local sent
+    local session = setmetatable({}, {
+      __index = {
+        set_breakpoints = function(_, payload)
+          sent = payload
+        end,
+      },
+    })
+    require("dap").listeners.before.event_initialized["dapui.breakpoints"](session)
+    session:set_breakpoints(require("dap.breakpoints").get(path_buf))
+    assert.same(
+      { 1 },
+      vim.tbl_map(function(bp)
+        return bp.line
+      end, sent[path_buf])
+    )
+    assert.is_false(require("dapui.breakpoints").is_active(path_buf, 3))
+    assert.same("a + 3 == 3", bps[2].condition or bps[1].condition)
+  end)
+
+  a.it("expands a breakpoint into its properties", function()
+    local keymaps = tests.util.get_mappings(buf)
+    keymaps["<CR>"](3)
+    nio.sleep(10)
+    local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert.same({
+      "test_a:",
+      " 1 line_a_1",
+      " 3 line_a_3",
+      "   Enabled: true",
+      "   Condition: a + 3 == 3",
+      "   Hit Condition: (none)",
+      "   Log Message: (none)",
+      "",
+      "test_b:",
+      " 2 line_b_2",
+      "   Log Message: here",
+    }, lines)
+  end)
+
+  a.it("edits a condition in nvim-dap", function()
+    local keymaps = tests.util.get_mappings(buf)
+    keymaps["<CR>"](3)
+    nio.sleep(10)
+    local input = vim.ui.input
+    vim.ui.input = function(opts, cb)
+      assert.same("a + 3 == 3", opts.default)
+      cb("a > 1")
+    end
+    keymaps = tests.util.get_mappings(buf)
+    keymaps.e(5)
+    vim.ui.input = input
+    local path_buf = vim.fn.bufnr("test_a")
+    local bp = require("dapui.breakpoints").breakpoint(path_buf, 3)
+    assert.same("a > 1", bp.condition)
+  end)
+
+  a.it("shows, edits and drops registered properties", function()
+    local store = require("dapui.breakpoints")
+    local path_buf = vim.fn.bufnr("test_a")
+    store.register("note", {
+      label = "Note",
+      type = "string",
+      default = nil,
+    })
+    nio.sleep(10)
+    local keymaps = tests.util.get_mappings(buf)
+    keymaps["<CR>"](2)
+    nio.sleep(10)
+    local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert.same("   Note: (none)", lines[7])
+    local input = vim.ui.input
+    vim.ui.input = function(_, cb)
+      cb("look here")
+    end
+    keymaps = tests.util.get_mappings(buf)
+    keymaps.e(7)
+    vim.ui.input = input
+    assert.same("look here", store.get(path_buf, 1, "note"))
+    keymaps = tests.util.get_mappings(buf)
+    keymaps["<CR>"](2)
+    nio.sleep(10)
+    lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
+    assert.same("   Note: look here", lines[3])
+    local marks = vim.api.nvim_buf_get_extmarks(
+      path_buf,
+      vim.api.nvim_get_namespaces()["dapui_breakpoint_properties"],
+      0,
+      -1,
+      {}
+    )
+    assert.same(1, #marks)
+    store.set(path_buf, 1, "note", nil)
+    marks = vim.api.nvim_buf_get_extmarks(
+      path_buf,
+      vim.api.nvim_get_namespaces()["dapui_breakpoint_properties"],
+      0,
+      -1,
+      {}
+    )
+    assert.same(0, #marks)
+  end)
+
+  a.it("holds back breakpoints a rule rejects", function()
+    local store = require("dapui.breakpoints")
+    local path_buf = vim.fn.bufnr("test_a")
+    store.add_rule("test", function(bp)
+      return bp.line ~= 1
+    end)
+    assert.is_false(store.is_active(path_buf, 1))
+    assert.is_true(store.is_active(path_buf, 3))
+    store.remove_rule("test")
+    assert.is_true(store.is_active(path_buf, 1))
+  end)
+
+  a.it("follows a breakpoint through edits with a handle", function()
+    local store = require("dapui.breakpoints")
+    local path_buf = vim.fn.bufnr("test_a")
+    local handle = store.handle(path_buf, 3)
+    nio.api.nvim_buf_set_lines(path_buf, 0, 0, false, { "new line" })
+    local located_buf, line = store.locate(handle)
+    assert.same(path_buf, located_buf)
+    assert.same(4, line)
+    store.release(handle)
   end)
 end)
