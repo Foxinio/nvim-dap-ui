@@ -27,7 +27,10 @@ return function(client, send_ready)
     group = vim.api.nvim_create_augroup("dapui_breakpoints_element", { clear = true }),
     pattern = "DapUIBreakpointsChanged",
     callback = function()
-      send_ready()
+      -- send_ready() renders right away inside the caller, which may hold
+      -- textlock (completion, expression mappings, statusline). Redraw from
+      -- the main loop instead.
+      vim.schedule(send_ready)
     end,
   })
 

@@ -54,6 +54,8 @@ describe("breakpoints element", function()
   end)
 
   after_each(function()
+    -- Stop this test's render loop so a late redraw can't recreate its buffer.
+    require("dapui.util").stop_render_tasks()
     pcall(vim.api.nvim_buf_delete, buf, { force = true })
     for path, _ in pairs(init_bps) do
       local path_buf = vim.fn.bufnr(path)
@@ -93,6 +95,7 @@ describe("breakpoints element", function()
   a.it("renders highlights with toggled breakpoint", function()
     local keymaps = tests.util.get_mappings(buf)
     keymaps.t(3)
+    nio.sleep(10)
     local highlights = tests.util.get_highlights(buf)
     assert.same({
       { "DapUIBreakpointsPath", 0, 0, 0, 6 },
@@ -247,5 +250,24 @@ describe("breakpoints element", function()
     assert.same(path_buf, located_buf)
     assert.same(4, line)
     store.release(handle)
+  end)
+
+  a.it("redraws after a change made while text is locked", function()
+    local notify, messages = vim.notify, {}
+    vim.notify = function(message)
+      messages[#messages + 1] = message
+    end
+    local path_buf = vim.fn.bufnr("test_a")
+    -- An expression mapping runs with textlock, like completion or statusline code.
+    vim.keymap.set("n", "<F13>", function()
+      require("dapui.breakpoints").set(path_buf, 3, "enabled", false)
+      return ""
+    end, { expr = true })
+    nio.api.nvim_feedkeys(vim.keycode("<F13>"), "xt", false)
+    nio.sleep(50)
+    vim.notify = notify
+    vim.keymap.del("n", "<F13>")
+    assert.same({}, messages)
+    assert.same({ "DapUIBreakpointsDisabledLine", 2, 1, 2, 2 }, tests.util.get_highlights(buf)[3])
   end)
 end)
