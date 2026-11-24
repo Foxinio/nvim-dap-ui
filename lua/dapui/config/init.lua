@@ -92,7 +92,7 @@ local dapui = {}
 ---@field sort_variables? fun(a: dapui.types.Variable, b: dapui.types.Variable):boolean Sorting function to determine
 --- render order of variables.
 
----@alias dapui.Action "expand"|"open"|"remove"|"edit"|"repl"|"toggle"|"watch"
+---@alias dapui.Action "expand"|"collapse"|"open"|"remove"|"edit"|"repl"|"toggle"|"watch"
 
 ---@alias dapui.FloatingAction "close"
 
@@ -104,6 +104,8 @@ local default_config = {
   mappings = {
     -- Use a table to apply multiple mappings
     expand = { "<CR>", "<2-LeftMouse>" },
+    -- Only bound in the Breakpoints element by default (see element_mappings).
+    collapse = {},
     open = "o",
     remove = "d",
     edit = "e",
@@ -111,7 +113,9 @@ local default_config = {
     toggle = "t",
     watch = "w",
   },
-  element_mappings = {},
+  element_mappings = {
+    breakpoints = { collapse = "<BS>" },
+  },
   source_window = {
     track = true,
     focus = true,

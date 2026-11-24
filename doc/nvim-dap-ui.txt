@@ -76,7 +76,11 @@ Default values:
       route_stops = true,
       tabby = true
     },
-    element_mappings = {},
+    element_mappings = {
+      breakpoints = {
+        collapse = "<BS>"
+      }
+    },
     expand_lines = true,
     floating = {
       border = "single",
@@ -118,6 +122,7 @@ Default values:
         size = 10
       } },
     mappings = {
+      collapse = {},
       edit = "e",
       expand = { "<CR>", "<2-LeftMouse>" },
       open = "o",
@@ -384,7 +389,7 @@ render order of variables.
 
                                                                   *dapui.Action*
 Alias~
-`dapui.Action` → `"expand"|"open"|"remove"|"edit"|"repl"|"toggle"|"watch"`
+`dapui.Action` → `"expand"|"collapse"|"open"|"remove"|"edit"|"repl"|"toggle"|"watch"`
 
                                                           *dapui.FloatingAction*
 Alias~
@@ -636,8 +641,11 @@ Mappings:
   stays in nvim-dap's list but is not sent to the debug adapter.
 - `remove`: Remove the selected breakpoint
 - `expand`: Show/hide every property of the selected breakpoint
-- `edit`: On an expanded property, change it (text is prompted for,
-  true/false flips, custom properties open their own editor)
+- `collapse` (`<BS>`): Hide the properties again, from the breakpoint's
+  line or any of its property rows
+- `edit`: On a breakpoint, show its properties; on an expanded property,
+  change it (text is prompted for, true/false flips, custom properties
+  open their own editor)
 
 Other plugins can add properties; see |dapui.breakpoints|.
 
