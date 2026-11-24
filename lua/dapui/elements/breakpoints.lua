@@ -18,8 +18,11 @@ return function(client)
   ---   stays in nvim-dap's list but is not sent to the debug adapter.
   --- - `remove`: Remove the selected breakpoint
   --- - `expand`: Show/hide every property of the selected breakpoint
-  --- - `edit`: On an expanded property, change it (text is prompted for,
-  ---   true/false flips, custom properties open their own editor)
+  --- - `collapse` (`<BS>`): Hide the properties again, from the breakpoint's
+  ---   line or any of its property rows
+  --- - `edit`: On a breakpoint, show its properties; on an expanded property,
+  ---   change it (text is prompted for, true/false flips, custom properties
+  ---   open their own editor)
   ---
   --- Other plugins can add properties; see |dapui.breakpoints|.
   dapui.elements.breakpoints = {

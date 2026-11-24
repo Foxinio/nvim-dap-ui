@@ -21,6 +21,13 @@ describe("checking setup function", function()
     assert.same({ "e" }, config.mappings.edit)
   end)
 
+  it("binds collapse to <BS> only in the Breakpoints element", function()
+    config.setup({})
+    assert.same({}, config.mappings.collapse)
+    assert.same({ "<BS>" }, config.element_mapping("breakpoints").collapse)
+    assert.same({}, config.element_mapping("scopes").collapse)
+  end)
+
   it("fills elements", function()
     config.setup({ layouts = { { size = 10, position = "left", elements = { "scopes" } } } })
     assert.same({ { id = "scopes", size = 1 } }, config.layouts[1].elements)

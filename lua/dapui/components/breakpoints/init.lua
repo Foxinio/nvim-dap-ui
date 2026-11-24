@@ -60,6 +60,10 @@ return function(client, send_ready)
             client.lib.jump_to_frame,
             { line = bp.line, column = 0, source = { path = bufname } }
           )
+          local function collapse()
+            expanded[key] = nil
+            send_ready()
+          end
           local function add_bp_mappings()
             canvas:add_mapping("open", jump_to_bp)
             canvas:add_mapping("remove", function()
@@ -72,6 +76,16 @@ return function(client, send_ready)
               expanded[key] = not expanded[key] or nil
               send_ready()
             end)
+            -- Editing starts by showing the breakpoint's properties.
+            canvas:add_mapping("edit", function()
+              if not expanded[key] then
+                expanded[key] = true
+                send_ready()
+              end
+            end)
+            if expanded[key] then
+              canvas:add_mapping("collapse", collapse)
+            end
           end
           if vim.tbl_count(text) ~= 0 then
             add_bp_mappings()
@@ -101,10 +115,8 @@ return function(client, send_ready)
               for _, property in ipairs(properties) do
                 local value = entry.properties[property.name]
                 canvas:add_mapping("open", jump_to_bp)
-                canvas:add_mapping("expand", function()
-                  expanded[key] = nil
-                  send_ready()
-                end)
+                canvas:add_mapping("expand", collapse)
+                canvas:add_mapping("collapse", collapse)
                 canvas:add_mapping("edit", function()
                   values.edit(bp, property, value)
                 end)
